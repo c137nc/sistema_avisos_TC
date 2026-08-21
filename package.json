@@ -1,0 +1,32 @@
+{
+  "name": "sistema_de_avisos_final",
+  "version": "1.0.0",
+  "description": "sistema para trabajo de campo",
+  "keywords": [
+    "abm",
+    "api"
+  ],
+  "license": "MIT",
+  "author": "Nadia Catan y Jorge Canete",
+  "type": "commonjs",
+  "main": "app.js",
+  "scripts": {
+    "dev": "nodemon app.js",
+    "start": "node app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "ejs": "^6.0.1",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "jsonwebtoken": "^9.0.3",
+    "mysql": "^2.18.1",
+    "mysql2": "^3.23.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
