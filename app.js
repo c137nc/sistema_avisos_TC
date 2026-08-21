@@ -44,7 +44,47 @@ const connection = require('./database/sistema_avisos_db.js');
 const avisos_array = require('./aviso.js');
 
 // ------ESTABLECEMOS LAS RUTAS DE NUESTRO SERVIDOR-----
+// registro de usurio
 
+app.post('/registrar' , async (req , res) => {
+    // desestructuro lo que me envian en el body
+    const { nombre, apellido, email, password , id_rol } = req.body;
+
+    //validaciones 
+    if (!nombre || !apellido || !email || !password || !id_rol) {
+        return res.status(400).json({ message: ' Los campos no pueden estar vacios' });
+    }
+    //para manejar errores de manera mas clara, usamos try catch
+    try {
+        //encriptamos la contraseña con brypt
+        const hashPassword = await bcrypt.hash( password, 10); // 10 es el numero de rondas de encriptacion
+
+        //guardo la query para insertar usuario
+        const query = `
+            INSERT INTO usuarios (nombre , apellido, email, password, id_rol , activo)
+            VALUES (?, ?, ?, ?, ?, 1)
+        `;
+
+        //ejecutamos la query con la conexion a la base de datos
+        connection.query(query, [nombre, apellido, email, hashPassword, id_rol], (error, results) => {
+            if (error) {
+                //controlamos que el mail no se repita
+                if (error.code === 'ER_DUP_ENTRY') {
+                    return res.status(400).json({ message: 'El email ya esta registrado' });
+                }
+                console.log('Error al registrar: ', error) ;
+                return res.status(500).json({ message: 'Error interno' });
+            }
+            // si todo sale bien, avisamos al usuario que se registro correctamente 
+            return res.status(200).json({ message: 'El usuario se registro correctamente' , id_usuario: results.insertId });
+        });
+    }
+    catch (error) {
+        console.log('Error al registrar: ', error);
+        return res.status(500).json({ message: 'Error al procesar la solicitud' });
+    }
+});
+//login de usuario
 app.post('/login', (req, res) => {
     // desestructuro lo que me envian en el body del request
     const { usuario, password } = req.body;
@@ -77,6 +117,8 @@ app.post('/login', (req, res) => {
 
         //COMPARAMOS LA CONTRASEÑA ENCRIPTADA (HASH) CON LA QUE NOS ENVIARON EN EL BODY DEL REQUEST
         const coincide = await bcrypt.compare(password, usuarioDB.password);
+
+        //controlo si la contraseña coincide con el hash que guarde en la bd xq me dba error  
         console.log(' ¿Coinciden?:', coincide);
 
         if(!coincide) {
@@ -96,7 +138,7 @@ app.post('/login', (req, res) => {
     });
 });
 
-//enciendo el servidor - va al final del archivo app.js
+//enciendo el servidor - va al final del archivo
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en http://localhost:${PORT}`);
     }
