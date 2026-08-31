@@ -1,52 +1,20 @@
-//traigo a dotenv para poder usar variables de entorno
-const dotenv = require('dotenv');
-//indicmos a donde esta el archivo .env
-dotenv.config({ path: './env/.env' });
-
-//traigo a express
-const express = require('express');
-const app = express();
+const express = require ('express');
+const router = express.Router();
 
 //traigo a cors para poder hacer peticiones desde el front
 const cors = require('cors');
-app.use(cors());
+router.use(cors());
 //traigo a jsonwebtoken para poder generar tokens
 const jwt = require('jsonwebtoken');
-
-//configuramos puerto
-const PORT = 3000;
-
-//usamos libreria para capturar datos de formularios
-app.use(express.urlencoded({ extended: false }));
-//HACEMOS QUE ENTIENDA JSON
-app.use(express.json());
-
-
-// *
-
 
 //invocamos la libreria bcrypt para encriptar contraseñas
 const bcrypt = require('bcryptjs');
 
-//invocamos la libreria express-session para manejar sesiones
-const session = require('express-session');
-//configuramos la sesion
-app.use(session({
-    secret: 'secret', //clave que usa express-session para firmar la cookie de sesion
-    resave: true, // guarda la sesion en cada peticion, aunque no haya cambios
-    saveUninitialized: true // guarda la sesion aunque no haya sido inicializada    
-}));
-
-//invocamos al modulo de conexion a la base de datos
-const connection = require('./database/sistema_avisos_db.js');
-
-//traigo referencia de archivo aviso.js 
-const avisos_array = require('./aviso.js');
 
 // ------ESTABLECEMOS LAS RUTAS DE NUESTRO SERVIDOR-----
 // registro de usurio
 
-app.post('/registrar' , async (req , res) => {
+router.post('/registrar' , async (req , res) => {
     // desestructuro lo que me envian en el body
     const { nombre, apellido, email, password , id_rol } = req.body;
 
@@ -85,7 +53,7 @@ app.post('/registrar' , async (req , res) => {
     }
 });
 //login de usuario
-app.post('/login', (req, res) => {
+router.post('/login', (req, res) => {
     // desestructuro lo que me envian en el body del request
     const { usuario, password } = req.body;
 
@@ -128,7 +96,7 @@ app.post('/login', (req, res) => {
         const token = jwt.sign(
             { id: usuarioDB.id_usuario, rol: usuarioDB.rol },
             process.env.JWT_SECRET || 'CLAVE_SECRETA_SISTEMA',
-            { expiresIn: '1h' } //el token expira en 1 hora
+            { expiresIn: '1h' } //el token expira en 1 hora => cambiar a media hora 
         );
         //enviamos el token al cliente
         return res.status(200).json({ 
@@ -138,45 +106,5 @@ app.post('/login', (req, res) => {
     });
 });
 
-//enciendo el servidor - va al final del archivo
-app.listen(PORT, () => {
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
-    }
-);
-
-/* para terminar despues el crud de avisos 
-
-// -----rutas------
-
-//listar
-app.get('/avisos', (req, res) => {
-    return res.json(avisos_array);
-
-    }
-);
-
-//cargar un aviso nuevo
-app.post('/avisos', (req, res) => {
-    //capturo lo que envien en el req 
-    let nuevoAviso = {
-        id: avisos_array.length + 1,
-        titulo: req.body.titulo,
-        descripcion: req.body.descripcion
-    }
-    //lo agrego al array
-    avisos_array.push(nuevoAviso);
-    return res.status(200).json(nuevoAviso);
-});
-
-//eliminar un aviso por id
-app.delete('/avisos/:id', (req, res) => {
-    let id = req.params.id;
-    let indiceBuscado = avisos_array.findIndex(aviso => aviso.id == id);
-    if (indiceBuscado >= 0) {
-        avisos_array.splice(indiceBuscado, 1);
-        return res.status(200).json({ message: `Aviso con id ${id} eliminado` });
-    }
-    return res.status(404).json({ message: `Aviso con id ${id} no encontrado` });
-});
-
-*/
+//exporto
+module.exports = router;
