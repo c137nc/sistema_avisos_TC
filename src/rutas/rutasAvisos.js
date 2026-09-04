@@ -8,9 +8,9 @@ const controller = require('../controllers/rutasAvisosController.js');
 router.get('/', controller.mostrarAvisos);
 //listar un aviso por id
 router.get('/:id', controller.mostrarAvisoPorId);
-//post aviso
+//crear aviso
 router.post('/', controller.crearAviso)
-//elete aviso por id
+//borar aviso por id
 router.delete('/:id', controller.borrarAviso);
 
 

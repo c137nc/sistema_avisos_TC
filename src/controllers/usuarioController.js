@@ -1,20 +1,15 @@
-const express = require ('express');
-const router = express.Router();
+//importo conexion a la bbdd
+const connection = require('../../database/sistema_avisos_db');
 
-//traigo a cors para poder hacer peticiones desde el front
-const cors = require('cors');
-router.use(cors());
 //traigo a jsonwebtoken para poder generar tokens
 const jwt = require('jsonwebtoken');
 
 //invocamos la libreria bcrypt para encriptar contraseñas
 const bcrypt = require('bcryptjs');
 
+// ---- REGISTRO Y LOGIN DE USUARIO ----
 
-// ------ESTABLECEMOS LAS RUTAS DE NUESTRO SERVIDOR-----
-// registro de usurio
-
-router.post('/registrar' , async (req , res) => {
+const registrarUsuario = async (req, res) => {
     // desestructuro lo que me envian en el body
     const { nombre, apellido, email, password , id_rol } = req.body;
 
@@ -34,7 +29,7 @@ router.post('/registrar' , async (req , res) => {
         `;
 
         //ejecutamos la query con la conexion a la base de datos
-        connection.query(query, [nombre, apellido, email, hashPassword, id_rol], (error, results) => {
+        connection.query(query, [nombre, apellido, email, hashPassword, id_rol], (error, resultado) => {
             if (error) {
                 //controlamos que el mail no se repita
                 if (error.code === 'ER_DUP_ENTRY') {
@@ -44,16 +39,16 @@ router.post('/registrar' , async (req , res) => {
                 return res.status(500).json({ message: 'Error interno' });
             }
             // si todo sale bien, avisamos al usuario que se registro correctamente 
-            return res.status(200).json({ message: 'El usuario se registro correctamente' , id_usuario: results.insertId });
+            return res.status(200).json({ message: 'El usuario se registro correctamente' , id_usuario: resultado.insertId });
         });
     }
     catch (error) {
         console.log('Error al registrar: ', error);
         return res.status(500).json({ message: 'Error al procesar la solicitud' });
     }
-});
-//login de usuario
-router.post('/login', (req, res) => {
+};
+
+const loginUsuario = async (req, res) => {
     // desestructuro lo que me envian en el body del request
     const { usuario, password } = req.body;
 
@@ -104,7 +99,9 @@ router.post('/login', (req, res) => {
             token: token,
             rol: usuarioDB.rol });
     });
-});
+}
 
-//exporto
-module.exports = router;
+module.exports = {
+    registrarUsuario,
+    loginUsuario
+}

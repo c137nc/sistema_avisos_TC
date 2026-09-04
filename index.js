@@ -28,8 +28,8 @@ app.use(session({
 
 //RUTAS
 
-//referencia al modulo loginUsuario.js donde estan definidas las rutas de /login y /registrar
-const mainRouter = require('./src/rutas/loginUsuario.js');
+//referencia al modulo usuario.js donde estan definidas las rutas de /login y /registrar
+const mainRouter = require('./src/rutas/usuario.js');
 app.use(mainRouter);
 //indico referencia a modulo rutasAvisos.js donde estan definidas las rutas de avisos
 const rutasAvisos = require('./src/rutas/rutasAvisos.js');
@@ -38,10 +38,6 @@ app.use('/avisos' , rutasAvisos);
 
 //configuramos puerto
 const PORT = process.env.PORT || 3001;
-
-
-
-// *
 
 
 //enciendo el servidor - va al final del archivo
