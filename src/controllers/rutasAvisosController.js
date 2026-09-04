@@ -56,7 +56,7 @@ const borrarAviso = (req, res) => {
         }
         return res.status(200).json({ mensaje: `El aviso con id: ${id}, fue eliminado correctamente`});
     })
-}
+};
 
 //Defino POST para crear un nuevo aviso , usamos async xq categoria,edificiois y carreras hacen consulta a bbdd
 const crearAviso = async (req,res ) => {
@@ -71,7 +71,7 @@ const crearAviso = async (req,res ) => {
 
         //validaciones de los datos recibidos
         //TITULO
-        //debe ser string xq en bbdd titulo VARCHAR(255)
+        //debe ser string xq en bbdd tengo titulo VARCHAR(255)
         if (typeof titulo !== "string" || titulo.trim() === "") {
             return res.status(400).json({ mensaje: `El titulo es obligatorio`});
         }
@@ -147,13 +147,18 @@ const crearAviso = async (req,res ) => {
             )
             VALUES (?,?,?,?,?,?,?,?,?)
         `
-        connection.query(query, [titulo, descripcion,fecha_publicacion , fecha_vencimiento, estado,id_usuario, id_categoria, todosEdificios, todasCarreras] , (error,resultado) => {
+        connection.query(query, [titulo, descripcion,fecha_publicacion , fecha_vencimiento, estado,id_usuario, id_categoria, todosEdificios, todasCarreras] , async (error,resultado) => {
             if(error) {
                 console.error(error);
                 return res.status(500).json({ mensaje: `Error al crear l aviso`});
             }
-            //si todo sale bien guardo el id_aviso generaado
+            //si todo sale bien guardo el id_aviso generaado para usarlo en la respuesta y en las tablas intermedias
             const id_aviso = resultado.insertId;
+
+            //una vez insertado el aviso, insertamos los registros en las tablas intermedias
+            await insertarAvisosEdificios(id_aviso, listaEdificios);
+            await insertarAvisosCarreras(id_aviso, listaCarreras);
+
             return res.status(200).json({ 
                 mensaje: `El aviso se creo correctamente`,
                 id_aviso: id_aviso
@@ -196,13 +201,13 @@ function existenEdificios(idsEdificios) {
     //usamos promise porque sql va a responder mas adelante y debemos hacerle saber que tiene que esperar
     return new Promise((resolve, reject) => {
         //logica para buscar coincidencias en la bbdd
-        //priero necesito saber cuantos elementos habra en el array
-        const cantElementos = idsEdificios.map(() => '?').join(',');
+        //priero necesito saber que elementos habra en el array
+        const arrayElementos = idsEdificios.map(() => '?').join(',');
         //query
         const query = `
             SELECT id_edificio
             FROM edificios
-            WHERE id_edificio IN (${cantElementos})
+            WHERE id_edificio IN (${arrayElementos})
         `;
         //ahora si hago la consulta
         connection.query(query,idsEdificios, (error,resultado) => {
@@ -223,7 +228,7 @@ function existenCarreras(idsCarreras){
     //usamos promise porque sql va a responder mas adelante y debemos hacerle saber que tiene que esperar
     return new Promise((resolve, reject) => {
         //logica para buscar coincidencias en la bbdd
-        //priero necesito saber cuantos elementos habra en el array
+        //priero necesito saber que elementos habra en el array
         const arrayComparacion = idsCarreras.map(() => '?').join(',');
         //query
         const query = `
@@ -244,15 +249,67 @@ function existenCarreras(idsCarreras){
         });
     });
 
-}
+};
+
+//creo funciones para hacer las inserciones en las tablas intermedias avisos_edificios y avisos_carreras
+function insertarAvisosEdificios(id_aviso, idsEdificios) {
+    return new Promise((resolve, reject) => {
+        //primero verifico si hay elementos en el array, si no hay no hago nada
+        if (idsEdificios.length === 0) {
+            resolve(); // No hay edificios para insertar, por lo tanto resolvemos la promesa
+            return;
+        }
+
+        //creo un array para almacenar los valores que tenemos que insertar en la tabla intermedia
+        const valores = idsEdificios.map(id_edificio => [id_aviso, id_edificio]);
+
+        //defino la query para insertar
+        const query = `
+            INSERT INTO avisos_edificios (id_aviso, id_edificio)
+            VALUES ?
+        `;
+
+        //ejecutamos la query
+        connection.query(query, [valores], (error, resultado) => {
+            if (error) {
+                reject(error);
+                return;
+            }
+            resolve(resultado);
+        });
+    });
+};
+
+// avisos_carreras
+function insertarAvisosCarreras(id_aviso, idsCarreras) {
+    return new Promise((resolve, reject) => {
+        //primero verifico si hay elementos en el array, si no hay no hago nada
+        if(idsCarreras.length === 0) {
+            resolve(); // No hay carreras para insertar, por lo tanto resolvemos la promesa
+            return;
+        }
+        //creo array para almacenar los valores qye debems insertar 
+        const valores = idsCarreras.map(id_carrera => [id_aviso, id_carrera]);
+        //defino la query para insertar
+        const query = `
+        INSERT INTO avisos_carreras(id_aviso, id_carrera)
+        VALUES ?
+        `;
+        //usamos la query
+        connection.query(query, [valores], (error, resultado) => {
+            if (error) {
+                reject(error);
+                return;
+            }
+            resolve(resultado);
+        });
+    });
+};
 
 
 module.exports = {
     mostrarAvisos,
     mostrarAvisoPorId, 
     borrarAviso,
-    existeCategoria, 
-    existenEdificios,
-    existenCarreras,
     crearAviso
 };
