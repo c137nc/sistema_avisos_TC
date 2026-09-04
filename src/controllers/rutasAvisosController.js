@@ -150,7 +150,7 @@ const crearAviso = async (req,res ) => {
         connection.query(query, [titulo, descripcion,fecha_publicacion , fecha_vencimiento, estado,id_usuario, id_categoria, todosEdificios, todasCarreras] , async (error,resultado) => {
             if(error) {
                 console.error(error);
-                return res.status(500).json({ mensaje: `Error al crear l aviso`});
+                return res.status(500).json({ mensaje: `Error al crear el aviso`});
             }
             //si todo sale bien guardo el id_aviso generaado para usarlo en la respuesta y en las tablas intermedias
             const id_aviso = resultado.insertId;
@@ -168,7 +168,7 @@ const crearAviso = async (req,res ) => {
     }
     catch (error) {
         console.error(error);
-        return res.status(500).json({ mensaje: `Erros de Servidor`});
+        return res.status(500).json({ mensaje: `Error de Servidor`});
     }
     
 };
@@ -177,7 +177,7 @@ const crearAviso = async (req,res ) => {
 function existeCategoria(id_categoria) {
     //usamos promise porque sql va a responder mas adelante y debemos hacerle saber que tiene que esperar
     return new Promise((resolve, reject) => {
-        //defino la consulta para buscar el id_categoria en ka tabla categorias
+        //defino la consulta para buscar el id_categoria en la tabla categorias
         const query = `
             SELECT id_categoria
             FROM categorias
