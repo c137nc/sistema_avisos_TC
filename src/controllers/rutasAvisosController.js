@@ -130,7 +130,7 @@ const crearAviso = async (req,res ) => {
             }
         }
         //logica para obtener id de usuario
-        const id_usuario = 1; //req.session.id_usuario;
+        const id_usuario = 1 || req.session.id_usuario;
         const estado = 'BORRADOR';
         //HAGO MI QUERY PARA HACER EL INSERT
         const query = `
