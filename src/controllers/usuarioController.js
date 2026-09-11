@@ -67,7 +67,7 @@ const loginUsuario = async (req, res) => {
     // *consulto en la base de datos si existe el usuario*
     connection.query(query, [usuario], async (error, results) => {
         if (error) {
-            return res.status(500).json({ message: 'Error en la consulta a la base de datos' });
+            return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
         }
 
         // si no hay resultados, el usuario no existe
