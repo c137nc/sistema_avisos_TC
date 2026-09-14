@@ -67,7 +67,7 @@ const loginUsuario = async (req, res) => {
     // *consulto en la base de datos si existe el usuario*
     connection.query(query, [usuario], async (error, results) => {
         if (error) {
-            return res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
+            return res.status(401).json({ message: 'Usuario o contraseña incorrecto' });
         }
 
         // si no hay resultados, el usuario no existe
@@ -87,15 +87,20 @@ const loginUsuario = async (req, res) => {
         if(!coincide) {
             return res.status(401).json({ message: 'Contraseña incorrecta' });
         }
-        //si hay coincidencia, generamos un token con jwt
-        const token = jwt.sign(
-            { id: usuarioDB.id_usuario, rol: usuarioDB.rol },
-            process.env.JWT_SECRET || 'CLAVE_SECRETA_SISTEMA',
-            { expiresIn: '1h' } //el token expira en 1 hora => cambiar a media hora 
+
+        // generamos payload para el token con jwt, que contendra el id del usuario, nombre y rol
+        const payload = {
+            id: usuarioDB.id_usuario,
+            usuario: usuarioDB.email,
+            rol: usuarioDB.rol
+        };
+        //firmamos el token con la clave secreta y le damos un tiempo de expiracion
+        const token = jwt.sign(payload, process.env.JWT_SECRET || 'CLAVE_SECRETA_SISTEMA',
+            { expiresIn: '1h' } //el token expira en 1 hora 
         );
         //enviamos el token al cliente
         return res.status(200).json({ 
-            message: 'Login exitoso',
+            mensaje: 'Autenticación exitosa',
             token: token,
             rol: usuarioDB.rol });
     });

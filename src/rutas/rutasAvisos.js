@@ -1,17 +1,18 @@
 const express = require ('express');
 const router = express.Router();
 
-//tienen que ser try catch?
 // ------ llamamos a las funciones definidas en el controller ------
 const controller = require('../controllers/rutasAvisosController.js');
+//llamamos al middleware de autenticacion para proteger las rutas
+const verificarToken = require('../middlewares/authMiddleware.js');
 //listar todos los avisos
-router.get('/', controller.mostrarAvisos);
+router.get('/', verificarToken, controller.mostrarAvisos);
 //listar un aviso por id
-router.get('/:id', controller.mostrarAvisoPorId);
+router.get('/:id', verificarToken, controller.mostrarAvisoPorId);
 //crear aviso
-router.post('/', controller.crearAviso)
+router.post('/', verificarToken, controller.crearAviso);
 //borar aviso por id
-router.delete('/:id', controller.borrarAviso);
+router.delete('/:id', verificarToken, controller.borrarAviso);
 
 
 
