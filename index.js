@@ -7,6 +7,16 @@ dotenv.config({ path: './env/.env' });
 const express = require('express');
 const app = express();
 
+//traemos a cors para poder hacer peticiones desde el front
+const cors = require('cors');
+//Agrego esto para habilitar CORS para el front
+app.use(cors({
+  origin: ['https://avisosunpaz.com.ar', 'http://localhost:5173'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token']
+  //Se agregó permiso para q el token modificado pueda pasar al back
+}));
+
 //invocamos al modulo de conexion a la base de datos
 const connection = require('./database/sistema_avisos_db.js');
 
@@ -14,17 +24,6 @@ const connection = require('./database/sistema_avisos_db.js');
 app.use(express.urlencoded({ extended: false }));
 //HACEMOS QUE ENTIENDA JSON
 app.use(express.json());
-
-
-//invocamos la libreria express-session para manejar sesiones
-const session = require('express-session');
-//configuramos la sesion
-app.use(session({
-    secret: 'secret', //clave que usa express-session para firmar la cookie de sesion
-    resave: true, // guarda la sesion en cada peticion, aunque no haya cambios
-    saveUninitialized: true // guarda la sesion aunque no haya sido inicializada    
-}));
-
 
 //RUTAS
 

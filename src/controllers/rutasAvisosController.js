@@ -129,8 +129,8 @@ const crearAviso = async (req,res ) => {
                 return res.status(400).json({mensaje: `No se encontró una o mas carreras`});
             }
         }
-        //logica para obtener id de usuario
-        const id_usuario = 1 || req.session.id_usuario;
+        //cambiamos la forma de capturar el id_usuario
+        const id_usuario = req.usuario.id; //obtenemos el id del usuario del token decodificado en el middleware de autenticacion
         const estado = 'BORRADOR';
         //HAGO MI QUERY PARA HACER EL INSERT
         const query = `

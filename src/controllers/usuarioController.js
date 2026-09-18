@@ -67,7 +67,7 @@ const loginUsuario = async (req, res) => {
     // *consulto en la base de datos si existe el usuario*
     connection.query(query, [usuario], async (error, results) => {
         if (error) {
-            return res.status(401).json({ message: 'Usuario o contraseña incorrecto' });
+            return res.status(401).json({ message: 'Usuario incorrecto' });
         }
 
         // si no hay resultados, el usuario no existe
@@ -82,7 +82,7 @@ const loginUsuario = async (req, res) => {
         const coincide = await bcrypt.compare(password, usuarioDB.password);
 
         //controlo si la contraseña coincide con el hash que guarde en la bd xq me dba error  
-        console.log(' ¿Coinciden?:', coincide);
+        //console.log(' ¿Coinciden?:', coincide);
 
         if(!coincide) {
             return res.status(401).json({ message: 'Contraseña incorrecta' });
