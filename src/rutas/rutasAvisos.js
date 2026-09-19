@@ -13,7 +13,8 @@ router.get('/:id', verificarToken, controller.mostrarAvisoPorId);
 router.post('/', verificarToken, controller.crearAviso);
 //borar aviso por id
 router.delete('/:id', verificarToken, controller.borrarAviso);
-
+//modificar aviso por id
+router.put('/:id', verificarToken, controller.modificarAviso);
 
 
 //lo pngo en un modulo para poder exportarlo y usarlo en otros archivos

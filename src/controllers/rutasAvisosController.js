@@ -173,6 +173,44 @@ const crearAviso = async (req,res ) => {
     
 };
 
+//definimos Put para completar el crud 
+const modificarAviso = (req, res) => {
+    //capturamos el id del aviso a modificar desde los parametros de la ruta
+    const { id } = req.params;
+    //desestructuramos los datos que nos envian en el body del request
+    const { titulo, descripcion, fecha_publicacion, fecha_vencimiento, id_categoria} = req.body;
+    //creamos query para buscar el aviso a modificar
+    const query = `SELECT * 
+    FROM avisos
+    WHERE id_aviso = ?`;
+    connection.query(query, [id] , (error, resultado) => {
+        if(error) {
+            console.error(error);
+            return res.status(500).json({ mensaje: `Error al obtener`});
+        }
+        if(resultado.length === 0){
+            return res.status(404).json({ mensaje: `El aviso con id: ${id} no existe`});
+        }
+        // si el aviso existe, hacemos la query para actualizarlo
+        const queryModificar = `
+        UPDATE avisos
+        SET titulo = ?,
+        descripcion = ?,
+        fecha_publicacion = ?,
+        fecha_vencimiento = ?,
+        id_categoria = ?
+        WHERE id_aviso = ?`;
+        // ejecutamos la query creada para modificar
+        connection.query(queryModificar, [titulo,descripcion,fecha_publicacion, fecha_vencimiento, id_categoria,id] , (error, resultado) => {
+            if (error) {
+                console.log(error);
+                return res.status(500).json({ mensaje: `Error al modificar el aviso`});
+            }
+            return res.status(200).json({mensaje: `El aviso con id: ${id} se ha modificado correctamente`});
+        });
+    });
+};
+
 //funcion para VERIFICAR SI EXISTE CATEGORIA en bbdd
 function existeCategoria(id_categoria) {
     //usamos promise porque sql va a responder mas adelante y debemos hacerle saber que tiene que esperar
@@ -311,5 +349,6 @@ module.exports = {
     mostrarAvisos,
     mostrarAvisoPorId, 
     borrarAviso,
-    crearAviso
+    crearAviso,
+    modificarAviso
 };
