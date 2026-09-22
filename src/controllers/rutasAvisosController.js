@@ -1,5 +1,10 @@
 //importo conexion a la bbdd
 const connection = require('../../database/sistema_avisos_db');
+//importo funciones para insertar en las tablas intermedias
+const { insertarAvisosEdificios, insertarAvisosCarreras, obtenerAvisoPorId, modificarAvisoModel } = require('../models/avisosModel.js');
+//importo funciones de validacion de los avisos
+const { validarDatosAviso, validarEdificios, validarCarreras } = require('../helpers/validacionesAvisos.js');
+
 
 //-----CRUD DE AVISOS -----
 
@@ -58,7 +63,9 @@ const borrarAviso = (req, res) => {
     })
 };
 
-//Defino POST para crear un nuevo aviso , usamos async xq categoria,edificiois y carreras hacen consulta a bbdd
+// Defino POST para crear un nuevo aviso.
+// Usamos async porque las validaciones de categoría,
+// edificios y carreras realizan consultas a la base de datos.
 const crearAviso = async (req,res ) => {
     try {
         //desestructuro lo que me envian en el body del req
@@ -68,67 +75,22 @@ const crearAviso = async (req,res ) => {
         const todosEdificios = listaEdificios.length === 0; //si no hay elementos, todos es true para respetar logica 
         const todasCarreras = listaCarreras.length === 0; //si no hay elementos, todos es true para respetar logica 
 
+        
+        // usamos las validaciones
+        const errorDatosAviso = await validarDatosAviso(req.body); //usamos await porque nuestra funcion devuelve un promise
+        if(errorDatosAviso){
+            return res.status(400).json({ mensaje: errorDatosAviso });
+        }
+        const errorEdificios = await validarEdificios(listaEdificios);
+        if(errorEdificios){
+            return res.status(400).json({ mensaje: errorEdificios });
+        }
+        const errorCarreras = await validarCarreras(listaCarreras);
+        if(errorCarreras){
+            return res.status(400).json({ mensaje: errorCarreras });
+        }
 
-        //validaciones de los datos recibidos
-        //TITULO
-        //debe ser string xq en bbdd tengo titulo VARCHAR(255)
-        if (typeof titulo !== "string" || titulo.trim() === "") {
-            return res.status(400).json({ mensaje: `El titulo es obligatorio`});
-        }
-        if (titulo.length > 255) {
-            return res.status(400).json({ mensaje: `El titulo debe contener menos de 255 caracteres`});
-        }
-        // DESCRIPCION en bbdd not null
-        if (typeof descripcion !== "string" || descripcion.trim() === "") {
-            return res.status(400).json({ mensaje: `La descripcion es obligatoria`});
-        }
-        //fecha publicacion < vecha vencimiento
-        const fechaPublicacion = new Date(fecha_publicacion);
-        const fechaVencimiento = new Date(fecha_vencimiento);
 
-        if(isNaN(fechaPublicacion.getTime()) || isNaN(fechaVencimiento.getTime())) {
-            return res.status(400).json({ mensaje: `Formato de fecha no valido`});
-        }
-        if(fechaPublicacion >= fechaVencimiento) {
-        return res.status(400).json({mensaje: `La fecha de publicacion debe ser anterior al vencimiento`});
-        } 
-        //validamos id_categoria, para esto requerimos utilizar la conexion a la bbdd por lo tanto usamos await para esperar 
-        const categoriaExiste = await existeCategoria(id_categoria); //usamos await porque nuestra funcion devuelve un promise
-        if(!categoriaExiste) {
-                return res.status(400).json({ mensaje: `La categoria ingresada es inexistente`});
-        }
-        //aca iria validacion para ver si me enviaron array para edificios y carreras
-        if(!Array.isArray(listaEdificios)){
-                //si no es un arreglo devuelve true
-                return res.status(400).json({ mensaje: `El campo para edificios debe ser un array`})
-        }
-        //valido que los elementos del array sean enteros
-        if(!listaEdificios.every(id => Number.isInteger(id))) {
-                return res.status(400).json({ mensaje: `Los id deben ser numeros enteros`});
-        }
-        //valido que haya elem. para hacer la consulta solo en ese caso y evitar error si lista es vacia
-        if(listaEdificios.length > 0) {
-                const edificiosExisten = await existenEdificios(listaEdificios); //devuelve true para todas las coincidencias v, y false si al menos uno no coincide
-                if(!edificiosExisten) {
-                    return res.status(400).json({mensaje: `No se encontró uno o mas edificios`});
-                }
-        }
-        //idem pero para carreras
-        if(!Array.isArray(listaCarreras)){
-            //si no es un arreglo devuelve true
-            return res.status(400).json({ mensaje: `El campo para carreras debe ser un array`})
-         }
-        //valido que los elemtnos del array sean enteros
-        if(!listaCarreras.every(id => Number.isInteger(id))) {
-                return res.status(400).json({ mensaje: `Los id deben ser numeros enteros`});
-        }
-        //valido que haya elem. para hacer la consulta solo en ese caso y evitar error si lista es vacia
-        if(listaCarreras.length > 0) {
-            const carrerasExisten = await existenCarreras(listaCarreras); //devuelve true para todas las coincidencias v, y false si al menos uno no coincide
-            if(!carrerasExisten) {
-                return res.status(400).json({mensaje: `No se encontró una o mas carreras`});
-            }
-        }
         //cambiamos la forma de capturar el id_usuario
         const id_usuario = req.usuario.id; //obtenemos el id del usuario del token decodificado en el middleware de autenticacion
         const estado = 'BORRADOR';
@@ -174,177 +136,52 @@ const crearAviso = async (req,res ) => {
 };
 
 //definimos Put para completar el crud 
-const modificarAviso = (req, res) => {
-    //capturamos el id del aviso a modificar desde los parametros de la ruta
-    const { id } = req.params;
-    //desestructuramos los datos que nos envian en el body del request
-    const { titulo, descripcion, fecha_publicacion, fecha_vencimiento, id_categoria} = req.body;
-    //creamos query para buscar el aviso a modificar
-    const query = `SELECT * 
-    FROM avisos
-    WHERE id_aviso = ?`;
-    connection.query(query, [id] , (error, resultado) => {
-        if(error) {
-            console.error(error);
-            return res.status(500).json({ mensaje: `Error al obtener`});
+const modificarAviso = async (req, res) => {
+    try {
+        //capturamos el id del aviso a modificar desde los parametros de la ruta
+        const { id } = req.params;
+        //desestructuramos los datos que nos envian en el body del request
+        const { titulo, descripcion, fecha_publicacion, fecha_vencimiento, id_categoria, edificios, carreras} = req.body;
+        const listaEdificios = edificios || [];
+        const listaCarreras = carreras || [];
+        const todosEdificios = listaEdificios.length === 0 ? 1 : 0; //si no hay elementos, todos es true para respetar logica 
+        const todasCarreras = listaCarreras.length === 0 ? 1 : 0; //si no hay elementos, todos es true para respetar logica 
+        
+        //llamamos a la funcion para buscar el id en la base verificando si existe el aviso
+        const avisoResultado = await obtenerAvisoPorId(id);
+        if (!avisoResultado) {
+            return res.status(404).json({ mensaje: `El aviso con id: ${id} no existe` });
         }
-        if(resultado.length === 0){
-            return res.status(404).json({ mensaje: `El aviso con id: ${id} no existe`});
+        //hacemos las validaciones de los datos del aviso, edificios y carreras
+        //reutilizando la logica del post de crear aviso
+        const errorDatosAviso = await validarDatosAviso(req.body); //usamos await porque el validador devuelve una promesa
+        if (errorDatosAviso) {
+            return res.status(400).json({ mensaje: errorDatosAviso });
         }
-        // si el aviso existe, hacemos la query para actualizarlo
-        const queryModificar = `
-        UPDATE avisos
-        SET titulo = ?,
-        descripcion = ?,
-        fecha_publicacion = ?,
-        fecha_vencimiento = ?,
-        id_categoria = ?
-        WHERE id_aviso = ?`;
-        // ejecutamos la query creada para modificar
-        connection.query(queryModificar, [titulo,descripcion,fecha_publicacion, fecha_vencimiento, id_categoria,id] , (error, resultado) => {
-            if (error) {
-                console.log(error);
-                return res.status(500).json({ mensaje: `Error al modificar el aviso`});
-            }
-            return res.status(200).json({mensaje: `El aviso con id: ${id} se ha modificado correctamente`});
-        });
-    });
-};
-
-//funcion para VERIFICAR SI EXISTE CATEGORIA en bbdd
-function existeCategoria(id_categoria) {
-    //usamos promise porque sql va a responder mas adelante y debemos hacerle saber que tiene que esperar
-    return new Promise((resolve, reject) => {
-        //defino la consulta para buscar el id_categoria en la tabla categorias
-        const query = `
-            SELECT id_categoria
-            FROM categorias
-            WHERE id_categoria = ?
-        `;
-        //usamos el metodo .query() para enviar instruccion sql a la base y recibir el resultado
-        connection.query(query, [id_categoria], (error, resultado) => {
-            if(error){
-                //manejamos error en caso de que algo falle rechazando la promesa
-                reject(error);
-                return;
-            }
-            //si todo sale bien , la consulta devuelve true si hay categoria o false si no hay en la tabla
-            resolve(resultado.length > 0);
-        });
-    });
-};
-
-//funcion para verificar si existen todos los ids del array de edificios y que sea un array lo que envian
-function existenEdificios(idsEdificios) {
-    //usamos promise porque sql va a responder mas adelante y debemos hacerle saber que tiene que esperar
-    return new Promise((resolve, reject) => {
-        //logica para buscar coincidencias en la bbdd
-        //priero necesito saber que elementos habra en el array
-        const arrayElementos = idsEdificios.map(() => '?').join(',');
-        //query
-        const query = `
-            SELECT id_edificio
-            FROM edificios
-            WHERE id_edificio IN (${arrayElementos})
-        `;
-        //ahora si hago la consulta
-        connection.query(query,idsEdificios, (error,resultado) => {
-            if(error){
-                //rechazo la promesa
-                reject(error);
-                return;
-            }
-            //verificamos si TODOS los ids existen
-            resolve(resultado.length === idsEdificios.length);
-
-        });
-    });
-};
-
-//funcion para verificar si existen todos los ids de carreras
-function existenCarreras(idsCarreras){
-    //usamos promise porque sql va a responder mas adelante y debemos hacerle saber que tiene que esperar
-    return new Promise((resolve, reject) => {
-        //logica para buscar coincidencias en la bbdd
-        //priero necesito saber que elementos habra en el array
-        const arrayComparacion = idsCarreras.map(() => '?').join(',');
-        //query
-        const query = `
-            SELECT id_carrera
-            FROM carreras
-            WHERE id_carrera IN (${arrayComparacion})
-        `;
-        //ahora si hago la consulta
-        connection.query(query,idsCarreras, (error,resultado) => {
-            if(error){
-                //rechazo la promesa
-                reject(error);
-                return;
-            }
-            //verificamos si TODOS los ids existen
-            resolve(resultado.length === idsCarreras.length);
-
-        });
-    });
-
-};
-
-//creo funciones para hacer las inserciones en las tablas intermedias avisos_edificios y avisos_carreras
-function insertarAvisosEdificios(id_aviso, idsEdificios) {
-    return new Promise((resolve, reject) => {
-        //primero verifico si hay elementos en el array, si no hay no hago nada
-        if (idsEdificios.length === 0) {
-            resolve(); // No hay edificios para insertar, por lo tanto resolvemos la promesa
-            return;
+        const errorEdificios = await validarEdificios(listaEdificios);
+        if (errorEdificios) {
+            return res.status(400).json({ mensaje: errorEdificios });
         }
-
-        //creo un array para almacenar los valores que tenemos que insertar en la tabla intermedia
-        const valores = idsEdificios.map(id_edificio => [id_aviso, id_edificio]);
-
-        //defino la query para insertar
-        const query = `
-            INSERT INTO avisos_edificios (id_aviso, id_edificio)
-            VALUES ?
-        `;
-
-        //ejecutamos la query
-        connection.query(query, [valores], (error, resultado) => {
-            if (error) {
-                reject(error);
-                return;
-            }
-            resolve(resultado);
-        });
-    });
-};
-
-// avisos_carreras
-function insertarAvisosCarreras(id_aviso, idsCarreras) {
-    return new Promise((resolve, reject) => {
-        //primero verifico si hay elementos en el array, si no hay no hago nada
-        if(idsCarreras.length === 0) {
-            resolve(); // No hay carreras para insertar, por lo tanto resolvemos la promesa
-            return;
+        const errorCarreras = await validarCarreras(listaCarreras);
+        if (errorCarreras) {
+            return res.status(400).json({ mensaje: errorCarreras });
         }
-        //creo array para almacenar los valores qye debems insertar 
-        const valores = idsCarreras.map(id_carrera => [id_aviso, id_carrera]);
-        //defino la query para insertar
-        const query = `
-        INSERT INTO avisos_carreras(id_aviso, id_carrera)
-        VALUES ?
-        `;
-        //usamos la query
-        connection.query(query, [valores], (error, resultado) => {
-            if (error) {
-                reject(error);
-                return;
-            }
-            resolve(resultado);
-        });
-    });
+        //llamamos a la funcion del modelo para modificar el aviso, pasando todos los datos necesarios
+        //usamos await para esperar a que la promesa se resuelva antes de continuar
+        await modificarAvisoModel(id, titulo, descripcion, fecha_publicacion, fecha_vencimiento, id_categoria, todosEdificios, todasCarreras);
+        //una vez modificado el aviso, insertamos los registros en las tablas intermedias
+        await insertarAvisosEdificios(id, listaEdificios);
+        await insertarAvisosCarreras(id, listaCarreras);
+        //salida para prueba
+        return res.status(200).json({ mensaje: `El aviso con id: ${id} se ha modificado correctamente` });
+
+    }
+    catch (error) {
+        console.error(error);
+        return res.status(500).json({ mensaje: `Error de Servidor` });
+    }
 };
-
-
+  
 module.exports = {
     mostrarAvisos,
     mostrarAvisoPorId, 
