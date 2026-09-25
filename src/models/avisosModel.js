@@ -1,6 +1,28 @@
 //importo conexion a la bbdd
 const connection = require('../../database/sistema_avisos_db');
 
+//funcion para obtener todos los avisos
+const obtenerTodosAvisos = () => {
+    return new Promise ((resolve, reject) => {
+        //defino mi query
+        const queryObtenerTodosAvisos = `
+            SELECT * 
+            FROM avisos
+        `;
+        //ejecuto la query
+        connection.query(queryObtenerTodosAvisos, (error, resultado) => {
+            //controlamos si hubo error en la consulta
+            if ( error ) {
+                //rechazo promesa
+                reject(error);
+                //corto
+                return;
+            }
+            //si sale bien
+            resolve(resultado); //devuelvo todos los avisos cono array
+        })
+    })
+}
 //funcion para obtener aviso por id
 const obtenerAvisoPorId = (id_aviso) => {
     return new Promise ((resolve , reject) => {
@@ -24,6 +46,49 @@ const obtenerAvisoPorId = (id_aviso) => {
     })
 };
 
+//defino funcion para eliminar aviso por id
+const eliminarAvisoPorId = (id_aviso) => {
+    return new Promise ((resolve, reject) => {
+        //eliminamos las relaciones en la tabla intermedia avisos_edificios
+        const queryEliminarRelacionesEdificios = ` 
+            DELETE FROM avisos_edificios
+            WHERE id_aviso = ?`;
+        connection.query(queryEliminarRelacionesEdificios, [id_aviso], (error, resultado) => {
+            if (error) {
+                reject(error);
+                return;
+            }
+            //Luego de eliminar avisos_edificios
+            //eliminamos las relaciones de carreras en la tabla intermedia
+            const queryEliminarRelacionesCarreras = ` 
+                DELETE FROM avisos_carreras
+                WHERE id_aviso = ?`;
+            connection.query(queryEliminarRelacionesCarreras, [id_aviso], (error, resultado) => {
+                if (error) {
+                    reject(error);
+                    return;
+                }
+                //defino mi query para eliminar el aviso
+                const queryEliminarAvisoPorId = `
+                    DELETE FROM avisos
+                    WHERE id_aviso = ?
+                `;
+                //ejecutamos la query
+                connection.query(queryEliminarAvisoPorId, [id_aviso], (error, resultado) => {
+                    if (error) {
+                        //rechazo la promesa
+                        reject(error);
+                        return;
+                    }
+                    //si no hay error resolvemos promesa con resultado
+                    //affectedRows devuelve 1 si lo elimino o 0 si no existia ese ID
+                    resolve(resultado.affectedRows)
+                });
+            });
+        });
+    });
+};
+    
 //funcion para modificar un aviso 
 const modificarAvisoModel = (id, titulo, descripcion, fecha_publicacion, fecha_vencimiento, id_categoria, todos_edificios, todas_carreras) => {
     return new Promise((resolve, reject) => {
@@ -214,6 +279,8 @@ module.exports = {
     existeCategoria,
     insertarAvisosEdificios,
     insertarAvisosCarreras,
+    obtenerTodosAvisos,
     obtenerAvisoPorId,
+    eliminarAvisoPorId,
     modificarAvisoModel
 };

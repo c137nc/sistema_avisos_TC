@@ -1,7 +1,9 @@
 //importo conexion a la bbdd
 const connection = require('../../database/sistema_avisos_db');
 //importo funciones para insertar en las tablas intermedias
-const { insertarAvisosEdificios, insertarAvisosCarreras, obtenerAvisoPorId, modificarAvisoModel } = require('../models/avisosModel.js');
+const { insertarAvisosEdificios, insertarAvisosCarreras } = require('../models/avisosModel.js');
+//importo funciones del model necesarias
+const {obtenerTodosAvisos ,obtenerAvisoPorId, eliminarAvisoPorId, modificarAvisoModel } = require ('../models/avisosModel.js');
 //importo funciones de validacion de los avisos
 const { validarDatosAviso, validarEdificios, validarCarreras } = require('../helpers/validacionesAvisos.js');
 
@@ -9,58 +11,58 @@ const { validarDatosAviso, validarEdificios, validarCarreras } = require('../hel
 //-----CRUD DE AVISOS -----
 
 //guardo en constante la funcion ue muestra todos los avisos
-const mostrarAvisos = (req, res) =>{
-    //defino mi query
-    const query = `
-        SELECT *
-        FROM avisos
-    `;
-    connection.query(query, (error, resultado) => {
-        if (error){
-            console.error(error);
-            return res.status(404).json({ mensaje: `Error al obtener los avisos`});
+const mostrarAvisos = async (req, res) =>{
+    try {
+        //llamamos a l afuncion del modelo
+        const todosAvisosResultado = await obtenerTodosAvisos();
+        //controlamos si hay avisos o no
+        if (!todosAvisosResultado || todosAvisosResultado.length === 0) {
+            return res.status(404).json({ mensaje: `No hay avisos disponibles`});
         }
-        return res.status(200).json(resultado);
-    })
+        return res.status(200).json(todosAvisosResultado);
+    }
+    catch (error) {
+        console.error(error);
+        return res.status(500).json({ mensaje: `Error de Servidor`});
+    }
 };
 
-const mostrarAvisoPorId = (req,res) => {
-    const {id} = req.params;
-    const query = `
-        SELECT *
-        FROM avisos
-        WHERE id_aviso = ?
-    `;
-    connection.query(query, [id] , (error, resultado) => {
-        if(error) {
-            console.error(error);
-            return res.status(500).json({ mensaje: `Error al obtener`});
+const mostrarAvisoPorId = async (req,res) => {
+    try {
+        //capturo el id desde los parametros de la ruta
+        const { id } = req.params;
+        //llamamos a la funcion del modelo
+        const avisoResultado = await obtenerAvisoPorId(id);
+        //controlamos si  el aviso existe o no
+        if (!avisoResultado) {
+            return res.status(404).json({ mensaje: `El aviso con id: ${id} no existe`});
         }
-        if(resultado.length === 0){
-            return res.status(404).json({ mensaje: `El aviso con id: ${id} no se encontro`});
-        }
-        return res.status(200).json(resultado[0]);
-    })
+        return res.status(200).json(avisoResultado);
+    }
+    catch (error) {
+        console.error(error);
+        return res.status(500).json({ mensaje: `Error de Servidor`});
+    }
+    
 };
 
 //funcion para borraar aviso
-const borrarAviso = (req, res) => {
-    const {id} = req.params;
-    //defino mi query
-    const query = `
-        DELETE FROM avisos
-        WHERE id_aviso = ?
-    `;
-    connection.query(query,[id],(error, resultado) => {
-        if(error){
-            console.error(error);
-            return res.status(500).json({ mensaje: `Error interno al eliminar`})
+const borrarAviso = async(req, res) => {
+    try {
+        const {id} = req.params;
+        //llamamos a la funcion del modelo
+        const avisoEliminado = await eliminarAvisoPorId(id);
+        //controlamos 
+        if (avisoEliminado === 0) {
+            return res.status(404).json({ mensaje : `No se encontro aviso con id: ${id}, no se completo la operacion para eliminar`})
         }
-        if(resultado.affectedRows===0){
-            return res.status(404).json({mensaje: `No se encontro id: ${id}, no se pudo eliminar`})
-        }
-        return res.status(200).json({ mensaje: `El aviso con id: ${id}, fue eliminado correctamente`});
-    })
+        return res.status(200).json({mensaje: `El aviso con id: ${id} se ha eliminado correctamente`});
+    }
+    catch (error) {
+        console.error(error)
+        return res.status(500).json({ mensaje: `Error de servidor`})
+    }
+    
 };
 
 // Defino POST para crear un nuevo aviso.
