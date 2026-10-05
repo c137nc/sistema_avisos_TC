@@ -1,6 +1,7 @@
 //importo conexion a la bbdd
 const connection = require('../../database/sistema_avisos_db');
 
+//OBTENER AVISOS - ENDPOINT GET 
 //version inicial para obtener los avisos dependiendo de los diferentes  filtros que se pueden ir agregando
 const obtenerAvisosPorFiltros = ({fechaDesde, fechaHasta, carreras, edificios}) => {
     return new Promise ((resolve, reject) => {
@@ -49,7 +50,30 @@ const obtenerAvisosPorFiltros = ({fechaDesde, fechaHasta, carreras, edificios}) 
     })
 };
 
-//OBTENER AVISOS - ENDPOINT GET 
+
+//funcion para obtener avisos vigenetes teniendo en cuenta un horario especifico
+const obtenerAvisosPorFechaHora = (fechaHora) => {
+    return new Promise ((resolve, reject) => {
+        // defino query que contemple fecha
+        const queryObtenerAvisoFecha = `
+            SELECT *
+            FROM avisos
+            WHERE fecha_publicacion <= ? 
+            AND fecha_vencimiento  >= ?
+        `;
+        //ejecutamos la query
+        connection.query(queryObtenerAvisoFecha,[fechaHora, fechaHora], (error, resultado) => {
+            if(error) {
+                //rechazo
+                reject(error);
+                return;
+            }
+            //si todo ok devuelvo aviso
+            resolve(resultado); // devuelvo array 
+        })
+    })
+};
+
 //funcion para obtener todos los avisos - ADMIN
 const obtenerTodosAvisos = () => {
     return new Promise ((resolve, reject) => {
@@ -91,52 +115,6 @@ const obtenerAvisoPorId = (id_aviso) => {
             }
             //si no hay error, resuelvo la promesa con el resultado
             resolve(resultado[0]); //devuelvo el aviso encontrado o undefined si no existe
-        })
-    })
-};
-
-// funcion para obtener avisos por rango horario
-const obtenerAvisosPorRango = (fechaDesde, fechaHasta) => {
-    console.log("fechaDesde:" , fechaDesde);
-    console.log("fechaHasta:", fechaHasta);
-    return new Promise ((resolve, reject)=> {
-        //defino query rango
-        const queryAvisosRango =`
-            SELECT *
-            FROM avisos
-            WHERE fecha_publicacion <= ?
-            AND fecha_vencimiento >= ?
-        `;
-        //ejecutamos la query
-        connection.query(queryAvisosRango, [fechaHasta,fechaDesde], (error,resultado)=> {
-            if(error){
-                reject(error)
-                return;
-            }
-            //si sale bien
-            resolve(resultado); //devuelvo array
-        })
-    })
-};
-//funcion para obtener avisos vigenetes teniendo en cuenta un horario especifico
-const obtenerAvisosPorFechaHora = (fechaHora) => {
-    return new Promise ((resolve, reject) => {
-        // defino query que contemple fecha
-        const queryObtenerAvisoFecha = `
-            SELECT *
-            FROM avisos
-            WHERE fecha_publicacion <= ? 
-            AND fecha_vencimiento  >= ?
-        `;
-        //ejecutamos la query
-        connection.query(queryObtenerAvisoFecha,[fechaHora, fechaHora], (error, resultado) => {
-            if(error) {
-                //rechazo
-                reject(error);
-                return;
-            }
-            //si todo ok devuelvo aviso
-            resolve(resultado); // devuelvo array 
         })
     })
 };
@@ -408,8 +386,7 @@ module.exports = {
     insertarAvisosCarreras,
     obtenerTodosAvisos,
     obtenerAvisoPorId,
-    //obtenerAvisosPorFechaHora,
-    //obtenerAvisosPorRango,
+    obtenerAvisosPorFechaHora,
     obtenerAvisosPorFiltros,
     eliminarAvisoPorId,
     modificarAvisoModel

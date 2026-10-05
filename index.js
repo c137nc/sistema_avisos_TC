@@ -33,7 +33,9 @@ app.use(mainRouter);
 //indico referencia a modulo rutasAvisos.js donde estan definidas las rutas de avisos
 const rutasAvisos = require('./src/rutas/rutasAvisos.js');
 app.use('/avisos' , rutasAvisos);
-
+//indico referencia a modulo rutasMaterias.js donde estan definidas las rutas de materias
+const rutasMaterias = require('./src/rutas/materiaRutas.js');
+app.use(rutasMaterias);
 
 //configuramos puerto
 const PORT = process.env.PORT || 3001;
