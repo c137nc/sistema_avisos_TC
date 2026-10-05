@@ -5,12 +5,17 @@ const router = express.Router();
 const controller = require('../controllers/rutasAvisosController.js');
 //llamamos al middleware de autenticacion para proteger las rutas
 const verificarToken = require('../middlewares/authMiddleware.js');
-//listar todos los avisos
-router.get('/', verificarToken, controller.mostrarAvisos);
-//listar un aviso por id
-router.get('/:id', verificarToken, controller.mostrarAvisoPorId);
+//CRUD AVISOS
 //crear aviso
 router.post('/', verificarToken, controller.crearAviso);
+//listar avisos vigentes en horario especifico
+router.get('/vigentes', verificarToken, controller.mostrarAvisosVigentes);
+//listar avisos vigentes segun filtros de fecha, carreras y edificios
+router.get('/filtros', verificarToken, controller.mostrarAvisosVigentesFiltros);
+//listar todos los avisos - admin
+router.get('/', verificarToken, controller.mostrarTodosAvisos);
+//listar un aviso por id - admin
+router.get('/:id', verificarToken, controller.mostrarAvisoPorId);
 //borar aviso por id
 router.delete('/:id', verificarToken, controller.borrarAviso);
 //modificar aviso por id

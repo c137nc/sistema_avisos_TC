@@ -34,7 +34,22 @@ const validarDatosAviso = async (datos) => {
     }
     return null; //si todo esta ok 
 
-}
+};
+//funcion para validar fechas 
+const validarFechas = (fechaDesde, fechaHasta) => {
+    //primero convertimos las fechas a objetos Date para poder compararlas
+    const fechaDesdeDate = new Date(fechaDesde);
+    const fechaHastaDate = new Date(fechaHasta);
+    //verificamos si las fechas son validas
+    if (isNaN(fechaDesdeDate.getTime()) || isNaN(fechaHastaDate.getTime())) {
+        return `Formato de fecha no valido`;
+    }
+    //verificamos si la fecha desde es anterior a la fecha hasta
+    if (fechaDesdeDate >= fechaHastaDate) {
+        return `La fecha desde debe ser anterior a la fecha hasta`;
+    }
+    return null; //si todo esta ok  
+};
 
 const validarEdificios = async (listaEdificios) => {
     //aca iria validacion para ver si me enviaron array para edificios y carreras
@@ -81,6 +96,7 @@ const validarCarreras = async (listaCarreras) => {
 
 module.exports = {
     validarDatosAviso,
+    validarFechas,
     validarEdificios,
     validarCarreras
 }

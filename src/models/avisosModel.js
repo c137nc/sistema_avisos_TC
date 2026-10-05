@@ -1,13 +1,62 @@
 //importo conexion a la bbdd
 const connection = require('../../database/sistema_avisos_db');
 
-//funcion para obtener todos los avisos
+//version inicial para obtener los avisos dependiendo de los diferentes  filtros que se pueden ir agregando
+const obtenerAvisosPorFiltros = ({fechaDesde, fechaHasta, carreras, edificios}) => {
+    return new Promise ((resolve, reject) => {
+        //definimos variable para almacenar la cantidad de posiciones de carreras en el array
+        let cantPosicionesArrayCarreras = "";
+        //definimos variable para almacenar la cantidad de posiciones de edificios en el array
+        let cantPosicionesArrayEdificios = "";
+        //si el array de carreras tiene elementos, generamos la cantidad de posiciones necesarias para la query
+        if (carreras && carreras.length > 0) {
+            cantPosicionesArrayCarreras = carreras.map(() => '?').join(',');
+        }
+        //si el array de edificios tiene elementos, generamos la cantidad de posiciones necesarias para la query
+        if (edificios && edificios.length > 0) {
+            cantPosicionesArrayEdificios = edificios.map(() => '?').join(',');
+        }
+        
+        //definimos query
+        let queryFiltros = `
+        SELECT DISTINCT a.*
+        FROM avisos as a
+        LEFT JOIN avisos_carreras as ac ON a.id_aviso = ac.id_aviso
+        LEFT JOIN avisos_edificios as ae ON a.id_aviso = ae.id_aviso
+        WHERE a.fecha_publicacion <= ?
+        AND a.fecha_vencimiento >= ?
+        `;
+        //si hay carreras agregamos la condicion a la query
+        if (carreras && carreras.length > 0) {
+            queryFiltros += ` AND (a.todas_carreras = 1 OR ac.id_carrera IN (${cantPosicionesArrayCarreras}))`;
+        }
+        //si hay edificios agregamos la condicion a la query
+        if (edificios && edificios.length > 0) {
+            queryFiltros += ` AND (a.todos_edificios = 1 OR ae.id_edificio IN (${cantPosicionesArrayEdificios}))`;
+        }
+        //creamos un array de parametros para la query, primero agregamos las fechas y luego las carreras si existen
+        const parametros = [fechaHasta, fechaDesde, ...(carreras || []), ...(edificios || [])]; //el vacio evita que se agregue undefined si carreras es null o undefined
+        //ejecuto la query , pasamos en orden  invertido los elementos del array para que funcione la logica de avisos vigentes correctamente 
+        connection.query(queryFiltros, parametros, (error,resultado) => {
+            if (error) {
+                //rechazo
+                reject(error);
+                return;
+            }
+            //i todo sale bien devuelvo el array de resultados resolviendo la promesa
+            resolve(resultado);
+        })
+    })
+};
+
+//OBTENER AVISOS - ENDPOINT GET 
+//funcion para obtener todos los avisos - ADMIN
 const obtenerTodosAvisos = () => {
     return new Promise ((resolve, reject) => {
         //defino mi query
         const queryObtenerTodosAvisos = `
             SELECT * 
-            FROM avisos
+            FROM avisos 
         `;
         //ejecuto la query
         connection.query(queryObtenerTodosAvisos, (error, resultado) => {
@@ -22,8 +71,8 @@ const obtenerTodosAvisos = () => {
             resolve(resultado); //devuelvo todos los avisos cono array
         })
     })
-}
-//funcion para obtener aviso por id
+};
+//funcion para obtener aviso por id - ADMIN
 const obtenerAvisoPorId = (id_aviso) => {
     return new Promise ((resolve , reject) => {
         //defino mi query
@@ -46,6 +95,83 @@ const obtenerAvisoPorId = (id_aviso) => {
     })
 };
 
+// funcion para obtener avisos por rango horario
+const obtenerAvisosPorRango = (fechaDesde, fechaHasta) => {
+    console.log("fechaDesde:" , fechaDesde);
+    console.log("fechaHasta:", fechaHasta);
+    return new Promise ((resolve, reject)=> {
+        //defino query rango
+        const queryAvisosRango =`
+            SELECT *
+            FROM avisos
+            WHERE fecha_publicacion <= ?
+            AND fecha_vencimiento >= ?
+        `;
+        //ejecutamos la query
+        connection.query(queryAvisosRango, [fechaHasta,fechaDesde], (error,resultado)=> {
+            if(error){
+                reject(error)
+                return;
+            }
+            //si sale bien
+            resolve(resultado); //devuelvo array
+        })
+    })
+};
+//funcion para obtener avisos vigenetes teniendo en cuenta un horario especifico
+const obtenerAvisosPorFechaHora = (fechaHora) => {
+    return new Promise ((resolve, reject) => {
+        // defino query que contemple fecha
+        const queryObtenerAvisoFecha = `
+            SELECT *
+            FROM avisos
+            WHERE fecha_publicacion <= ? 
+            AND fecha_vencimiento  >= ?
+        `;
+        //ejecutamos la query
+        connection.query(queryObtenerAvisoFecha,[fechaHora, fechaHora], (error, resultado) => {
+            if(error) {
+                //rechazo
+                reject(error);
+                return;
+            }
+            //si todo ok devuelvo aviso
+            resolve(resultado); // devuelvo array 
+        })
+    })
+};
+
+// ---------------------------------------------------------------------------------------------
+//defino funcion para crear aviso
+const crearAvisoModel = (titulo, descripcion, fecha_publicacion, fecha_vencimiento,id_usuario, id_categoria, todosEdificios, todasCarreras) => {
+    //retorno una promesa para poder usar async await en el controller
+    return new Promise((resolve, reject) => {
+        //defino mi query para insertar aviso
+        const queryCrearAviso = `
+            INSERT INTO avisos (
+                titulo,
+                descripcion,
+                fecha_publicacion,
+                fecha_vencimiento,
+                id_usuario,
+                id_categoria,
+                todos_edificios,
+                todas_carreras
+            )
+            VALUES(?,?,?,?,?,?,?,?)    
+            `;
+            //ejecutamos  la query
+            connection.query(queryCrearAviso, [titulo, descripcion, fecha_publicacion, fecha_vencimiento, id_usuario, id_categoria, todosEdificios, todasCarreras], (error, resultado) => {
+                if(error) {
+                    //rechazo la promesa
+                    reject(error);
+                    return;
+                }
+                //si todo sale bien, resolvemos la promesa con el aviso creado
+                resolve(resultado);//este resultado es un objeto mysql, dentro de sus claves esta el insertId que es el id del aviso creado
+            })
+    })
+};
 //defino funcion para eliminar aviso por id
 const eliminarAvisoPorId = (id_aviso) => {
     return new Promise ((resolve, reject) => {
@@ -163,7 +289,7 @@ function existenEdificios(idsEdificios) {
     });
 };
 
-//funcion para verificar si existen todos los ids de carreras
+//funcion para verificar si existen todos los ids de carreras => devuelve true si todos existen o false si alguno no existe
 function existenCarreras(idsCarreras){
     //usamos promise porque sql va a responder mas adelante y debemos hacerle saber que tiene que esperar
     return new Promise((resolve, reject) => {
@@ -274,6 +400,7 @@ function insertarAvisosCarreras(id_aviso, idsCarreras) {
 
 
 module.exports = {
+    crearAvisoModel,
     existenEdificios,
     existenCarreras,
     existeCategoria,
@@ -281,6 +408,9 @@ module.exports = {
     insertarAvisosCarreras,
     obtenerTodosAvisos,
     obtenerAvisoPorId,
+    //obtenerAvisosPorFechaHora,
+    //obtenerAvisosPorRango,
+    obtenerAvisosPorFiltros,
     eliminarAvisoPorId,
     modificarAvisoModel
 };

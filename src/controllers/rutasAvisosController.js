@@ -1,20 +1,38 @@
-//importo conexion a la bbdd
-const connection = require('../../database/sistema_avisos_db');
 //importo funciones para insertar en las tablas intermedias
 const { insertarAvisosEdificios, insertarAvisosCarreras } = require('../models/avisosModel.js');
 //importo funciones del model necesarias
-const {obtenerTodosAvisos ,obtenerAvisoPorId, eliminarAvisoPorId, modificarAvisoModel } = require ('../models/avisosModel.js');
+//obtenerAvisosPorFechaHora,obtenerAvisosPorRango
+const { crearAvisoModel,obtenerAvisosPorFiltros ,obtenerAvisoPorId,obtenerTodosAvisos, eliminarAvisoPorId, modificarAvisoModel } = require ('../models/avisosModel.js');
 //importo funciones de validacion de los avisos
-const { validarDatosAviso, validarEdificios, validarCarreras } = require('../helpers/validacionesAvisos.js');
+const { validarDatosAviso,validarFechas, validarEdificios, validarCarreras } = require('../helpers/validacionesAvisos.js');
 
 
 //-----CRUD DE AVISOS -----
-
-//guardo en constante la funcion ue muestra todos los avisos
-const mostrarAvisos = async (req, res) =>{
+//funcion para mostrar avisos por rango - incluye rango 24 hs
+const mostrarAvisosVigentesFiltros= async (req, res) =>{
     try {
+        //capturo info del body del request
+        const {fechaDesde, fechaHasta, carreras, edificios} = req.body;
+        //validamos las fechas para evitar hacer la consulta si no son validas
+        const errorFechas = validarFechas(fechaDesde, fechaHasta);
+        //si hay error detenemos la ejecucion y devolvemos el error
+        if (errorFechas) {
+            return res.status(400).json({ mensaje: errorFechas });
+        }
+        //validamos las carreras para evitar hacer la consulta si no son validas
+        const errorCarreras = await validarCarreras(carreras);
+        
+        if (errorCarreras) {
+            return res.status(400).json({ mensaje: errorCarreras });
+        }
+        //validamos los edificios para evitar hacer la consulta si no son validas
+        const errorEdificios = await validarEdificios(edificios);
+        //si hay error detenemos la ejecucion y devolvemos el error
+        if (errorEdificios) {
+            return res.status(400).json({ mensaje: errorEdificios });
+        }
         //llamamos a l afuncion del modelo
-        const todosAvisosResultado = await obtenerTodosAvisos();
+        const todosAvisosResultado = await obtenerAvisosPorFiltros({fechaDesde, fechaHasta, carreras, edificios}) 
         //controlamos si hay avisos o no
         if (!todosAvisosResultado || todosAvisosResultado.length === 0) {
             return res.status(404).json({ mensaje: `No hay avisos disponibles`});
@@ -26,6 +44,25 @@ const mostrarAvisos = async (req, res) =>{
         return res.status(500).json({ mensaje: `Error de Servidor`});
     }
 };
+//guardo en constante la funcion ue muestra  los avisos vigentes en hororio especifico
+const mostrarAvisosVigentes = async (req, res) =>{
+    try {
+        //capturo fecha
+        const {fechaHora} = req.body;
+        //llamamos a l afuncion del modelo
+        const todosAvisosResultado = await obtenerAvisosPorFechaHora(fechaHora);
+        //controlamos si hay avisos o no
+        if (!todosAvisosResultado || todosAvisosResultado.length === 0) {
+            return res.status(404).json({ mensaje: `No hay avisos disponibles`});
+        }
+        return res.status(200).json(todosAvisosResultado);
+    }
+    catch (error) {
+        console.error(error);
+        return res.status(500).json({ mensaje: `Error de Servidor`});
+    }
+};
+//cobtener avisos por id para admin
 
 const mostrarAvisoPorId = async (req,res) => {
     try {
@@ -44,6 +81,22 @@ const mostrarAvisoPorId = async (req,res) => {
         return res.status(500).json({ mensaje: `Error de Servidor`});
     }
     
+};
+
+//funcion que muestra todos los avisos para admin
+const mostrarTodosAvisos = async (req, res) =>{
+    try {
+        const todosAvisosResultado = await obtenerTodosAvisos() ;
+        //controlamos si hay avisos o no
+        if (!todosAvisosResultado || todosAvisosResultado.length === 0) {
+            return res.status(404).json({ mensaje: `No hay avisos disponibles`});
+        }
+        return res.status(200).json(todosAvisosResultado);
+    }
+    catch (error) {
+        console.error(error);
+        return res.status(500).json({ mensaje: `Error de Servidor`});
+    }
 };
 
 //funcion para borraar aviso
@@ -76,7 +129,6 @@ const crearAviso = async (req,res ) => {
         const listaCarreras = carreras || [];
         const todosEdificios = listaEdificios.length === 0; //si no hay elementos, todos es true para respetar logica 
         const todasCarreras = listaCarreras.length === 0; //si no hay elementos, todos es true para respetar logica 
-
         
         // usamos las validaciones
         const errorDatosAviso = await validarDatosAviso(req.body); //usamos await porque nuestra funcion devuelve un promise
@@ -92,49 +144,23 @@ const crearAviso = async (req,res ) => {
             return res.status(400).json({ mensaje: errorCarreras });
         }
 
-
         //cambiamos la forma de capturar el id_usuario
         const id_usuario = req.usuario.id; //obtenemos el id del usuario del token decodificado en el middleware de autenticacion
-        const estado = 'BORRADOR';
-        //HAGO MI QUERY PARA HACER EL INSERT
-        const query = `
-            INSERT INTO avisos (
-                titulo,
-                descripcion,
-                fecha_publicacion,
-                fecha_vencimiento,
-                estado,
-                id_usuario,
-                id_categoria,
-                todos_edificios,
-                todas_carreras    
-            )
-            VALUES (?,?,?,?,?,?,?,?,?)
-        `
-        connection.query(query, [titulo, descripcion,fecha_publicacion , fecha_vencimiento, estado,id_usuario, id_categoria, todosEdificios, todasCarreras] , async (error,resultado) => {
-            if(error) {
-                console.error(error);
-                return res.status(500).json({ mensaje: `Error al crear el aviso`});
-            }
-            //si todo sale bien guardo el id_aviso generaado para usarlo en la respuesta y en las tablas intermedias
-            const id_aviso = resultado.insertId;
+        //llamamos a la funcion del modelo para crear el aviso, pasando todos los datos necesarios
+        const resultadoCreacion = await crearAvisoModel(titulo, descripcion, fecha_publicacion, fecha_vencimiento, id_usuario, id_categoria, todosEdificios, todasCarreras);
+        //capturamos el id del aviso creado
+        const id_aviso = resultadoCreacion.insertId;
 
-            //una vez insertado el aviso, insertamos los registros en las tablas intermedias
-            await insertarAvisosEdificios(id_aviso, listaEdificios);
-            await insertarAvisosCarreras(id_aviso, listaCarreras);
+        //una vez insertado el aviso, insertamos los registros en las tablas intermedias
+        await insertarAvisosEdificios(id_aviso, listaEdificios);
+        await insertarAvisosCarreras(id_aviso, listaCarreras);
 
-            return res.status(200).json({ 
-                mensaje: `El aviso se creo correctamente`,
-                id_aviso: id_aviso
-            });
-
-        });
+        return res.status(200).json({mensaje: `El aviso se creo correctamente`,id_aviso: id_aviso});
     }
     catch (error) {
         console.error(error);
         return res.status(500).json({ mensaje: `Error de Servidor`});
     }
-    
 };
 
 //definimos Put para completar el crud 
@@ -185,8 +211,10 @@ const modificarAviso = async (req, res) => {
 };
   
 module.exports = {
-    mostrarAvisos,
-    mostrarAvisoPorId, 
+    mostrarAvisosVigentes, //esta ffalta llevarla a rutas 
+    mostrarAvisosVigentesFiltros, //falta llevarlo a rutas pero ya esta probado y esta ok 
+    mostrarTodosAvisos, //admin
+    mostrarAvisoPorId, //admin
     borrarAviso,
     crearAviso,
     modificarAviso
