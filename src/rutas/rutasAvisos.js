@@ -4,7 +4,7 @@ const router = express.Router();
 // ------ llamamos a las funciones definidas en el controller ------
 const controller = require('../controllers/rutasAvisosController.js');
 //llamamos al middleware de autenticacion para proteger las rutas
-const verificarToken = require('../middlewares/authMiddleware.js');
+const {verificarToken} = require('../middlewares/authMiddleware.js');
 //CRUD AVISOS
 //crear aviso
 router.post('/', verificarToken, controller.crearAviso);

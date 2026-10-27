@@ -17,8 +17,6 @@ app.use(cors({
   //Se agregó permiso para q el token modificado pueda pasar al back
 }));
 
-//invocamos al modulo de conexion a la base de datos
-const connection = require('./database/sistema_avisos_db.js');
 
 //usamos libreria para capturar datos de formularios
 app.use(express.urlencoded({ extended: false }));
@@ -28,7 +26,7 @@ app.use(express.json());
 //RUTAS
 
 //referencia al modulo usuario.js donde estan definidas las rutas de /login y /registrar
-const mainRouter = require('./src/rutas/usuario.js');
+const mainRouter = require('./src/rutas/rutasUsuarios.js');
 app.use(mainRouter);
 //indico referencia a modulo rutasAvisos.js donde estan definidas las rutas de avisos
 const rutasAvisos = require('./src/rutas/rutasAvisos.js');

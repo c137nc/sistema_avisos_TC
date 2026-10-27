@@ -22,5 +22,27 @@ const verificarToken = (req, res, next) => {
         return res.status(401).json({ mensaje: 'Token inválido o expirado' });
     }
 };
+// funcion para verificar el rol del usuario 
 
-module.exports = verificarToken;
+const  verificarRol = (rolPemitido) => {
+    return (req, res, next) => {
+        //comprobamos que exista la informacion del usuario 
+        if (!req.usuario || !req.usuario.rol) {
+            return res.status(401).json({ mensaje: 'Acceso denegado. Usuario no autenticado' });
+        }
+        //comprobamos que el rol del usuario sea el permitido
+        if (req.usuario.rol.toLowerCase() !== rolPemitido.toLowerCase()) {
+            return res.status(403).json({ mensaje: 'Acceso denegado. No tiene permisos para esta acción' });
+        }
+        //si el roll es correcto, pasamos al siguiente middleware o controlador
+        next();
+    }
+};
+
+
+
+//exportamos las funciones para poder usarlas en otros archivos
+module.exports = {
+    verificarToken,
+    verificarRol
+};

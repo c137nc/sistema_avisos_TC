@@ -5,9 +5,9 @@ const router = express.Router();
 const controller = require('../controllers/materiasController.js');
 
 //llamamos al middleware de autenticacion para proteger las rutas
-const verificarToken = require('../middlewares/authMiddleware.js');
+const {verificarToken} = require('../middlewares/authMiddleware.js');
 //get materias vigentes por dia
-router.get('/materias', verificarToken, controller.mostrarMateriasPorDia);
+router.get('/materias', controller.mostrarMateriasPorDia);
 
 //lo pngo en un modulo para poder exportarlo y usarlo en otros archivos
 module.exports = router;
