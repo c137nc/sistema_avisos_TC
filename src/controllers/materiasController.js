@@ -5,7 +5,8 @@ const { obtenerMateriasPorDia } = require('../models/materiasModel.js');
 const mostrarMateriasPorDia = async (req, res) => {
     try {
         //capturo el dia del request
-        const {dia} = req.body;
+        //const {dia} = req.body;
+        const {dia} = req.params;
         //llamo a la funcion del modelo para obtener materias vigentes por dia
         const resultadoMaterias = await obtenerMateriasPorDia(dia);
         //controlar si hay materias vigentes

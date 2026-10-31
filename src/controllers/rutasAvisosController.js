@@ -2,7 +2,7 @@
 const { insertarAvisosEdificios, insertarAvisosCarreras } = require('../models/avisosModel.js');
 //importo funciones del model necesarias
 //obtenerAvisosPorFechaHora,obtenerAvisosPorRango
-const { crearAvisoModel,obtenerAvisosPorFiltros ,obtenerAvisoPorId,obtenerTodosAvisos, eliminarAvisoPorId, modificarAvisoModel } = require ('../models/avisosModel.js');
+const { crearAvisoModel,obtenerAvisosPorFiltros ,obtenerAvisoPorId,obtenerTodosAvisos, eliminarAvisoPorId, modificarAvisoModel, cambiarEstadoAvisoModel } = require ('../models/avisosModel.js');
 //importo funciones de validacion de los avisos
 const { validarDatosAviso,validarFechas, validarEdificios, validarCarreras } = require('../helpers/validacionesAvisos.js');
 
@@ -209,6 +209,29 @@ const modificarAviso = async (req, res) => {
         return res.status(500).json({ mensaje: `Error de Servidor` });
     }
 };
+
+// NUEVO CONTROLADOR: Modificar estado del aviso
+const modificarEstadoAviso = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { estado_aprobacion } = req.body;
+        
+        // Validación estricta para evitar inyecciones o errores tipográficos
+        if (!['En revision', 'Aprobado', 'Rechazado'].includes(estado_aprobacion)) {
+            return res.status(400).json({ mensaje: "Estado de aprobación no válido" });
+        }
+        
+        const afectado = await cambiarEstadoAvisoModel(id, estado_aprobacion);
+        if (afectado === 0) {
+            return res.status(404).json({ mensaje: "No se encontró el aviso especificado" });
+        }
+        
+        return res.status(200).json({ mensaje: `El aviso ha sido marcado como: ${estado_aprobacion}`});
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ mensaje: "Error interno del servidor al cambiar el estado" });
+    }
+};  
   
 module.exports = {
     mostrarAvisosVigentes, //esta ffalta llevarla a rutas 
@@ -217,5 +240,6 @@ module.exports = {
     mostrarAvisoPorId, //admin
     borrarAviso,
     crearAviso,
-    modificarAviso
+    modificarAviso,
+    modificarEstadoAviso
 };

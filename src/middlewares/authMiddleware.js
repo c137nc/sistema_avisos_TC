@@ -24,15 +24,18 @@ const verificarToken = (req, res, next) => {
 };
 // funcion para verificar el rol del usuario 
 
-const  verificarRol = (rolPemitido) => {
+const  verificarRol = (...rolesPemitidos) => {
     return (req, res, next) => {
         //comprobamos que exista la informacion del usuario 
         if (!req.usuario || !req.usuario.rol) {
             return res.status(401).json({ mensaje: 'Acceso denegado. Usuario no autenticado' });
         }
-        //comprobamos que el rol del usuario sea el permitido
-        if (req.usuario.rol.toLowerCase() !== rolPemitido.toLowerCase()) {
-            return res.status(403).json({ mensaje: 'Acceso denegado. No tiene permisos para esta acción' });
+        //almacenamos el rol del usuario en una variable
+        const rolUsuario = req.usuario.rol.toLowerCase();
+        //comprobamos si el rol del usuario esta en la lista de roles permitidos
+        const tienePermiso = rolesPemitidos.some(rol => rol.toLowerCase() === rolUsuario);
+        if (!tienePermiso) {
+            return res.status(403).json({ mensaje: 'Acceso denegado. Usuario no autorizado' });
         }
         //si el roll es correcto, pasamos al siguiente middleware o controlador
         next();

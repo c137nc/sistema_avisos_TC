@@ -12,7 +12,7 @@ const cors = require('cors');
 //Agrego esto para habilitar CORS para el front
 app.use(cors({
   origin: ['https://avisosunpaz.com.ar', 'http://localhost:5173'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token']
   //Se agregó permiso para q el token modificado pueda pasar al back
 }));

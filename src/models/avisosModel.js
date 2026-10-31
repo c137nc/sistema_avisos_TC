@@ -26,6 +26,7 @@ const obtenerAvisosPorFiltros = ({fechaDesde, fechaHasta, carreras, edificios}) 
         LEFT JOIN avisos_edificios as ae ON a.id_aviso = ae.id_aviso
         WHERE a.fecha_publicacion <= ?
         AND a.fecha_vencimiento >= ?
+        AND a.estado_aprobacion = 'Aprobado'
         `;
         //si hay carreras agregamos la condicion a la query
         if (carreras && carreras.length > 0) {
@@ -60,6 +61,7 @@ const obtenerAvisosPorFechaHora = (fechaHora) => {
             FROM avisos
             WHERE fecha_publicacion <= ? 
             AND fecha_vencimiento  >= ?
+            AND estado_aprobacion = 'Aprobado'
         `;
         //ejecutamos la query
         connection.query(queryObtenerAvisoFecha,[fechaHora, fechaHora], (error, resultado) => {
@@ -374,6 +376,24 @@ function insertarAvisosCarreras(id_aviso, idsCarreras) {
 };
 
 
+// NUEVA FUNCIÓN: Modificar el estado de aprobación de un aviso
+const cambiarEstadoAvisoModel = (id_aviso, nuevo_estado) => {
+    return new Promise((resolve, reject) => {
+        const query = `
+            UPDATE avisos 
+            SET estado_aprobacion = ? 
+            WHERE id_aviso = ?
+        `;
+        connection.query(query, [nuevo_estado, id_aviso], (error, resultado) => {
+            if (error) {
+                reject(error);
+                return;
+            }
+            // Devuelve la cantidad de filas afectadas (1 si funcionó, 0 si el id no existe)
+            resolve(resultado.affectedRows);
+        });
+    });
+};
 
 
 
@@ -389,5 +409,6 @@ module.exports = {
     obtenerAvisosPorFechaHora,
     obtenerAvisosPorFiltros,
     eliminarAvisoPorId,
-    modificarAvisoModel
+    modificarAvisoModel,
+    cambiarEstadoAvisoModel
 };
