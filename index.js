@@ -24,7 +24,10 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
 //RUTAS
-
+// Importamos las rutas de administración de API Keys
+const apiKeysRutas = require('./src/rutas/apiKeysRutas.js');
+// Registramos las rutas
+app.use('/api-keys', apiKeysRutas);
 //referencia al modulo usuario.js donde estan definidas las rutas de /login y /registrar
 const mainRouter = require('./src/rutas/rutasUsuarios.js');
 app.use(mainRouter);
