@@ -13,7 +13,7 @@ const cors = require('cors');
 app.use(cors({
   origin: ['https://avisosunpaz.com.ar', 'http://localhost:5173'],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token']
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'x-api-key'],
   //Se agregó permiso para q el token modificado pueda pasar al back
 }));
 

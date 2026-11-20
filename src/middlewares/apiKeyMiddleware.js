@@ -6,13 +6,12 @@ const {buscarApiKeyPorHash,registrarSolicitud} = require('../models/apiKeysModel
 
 // funcion Middleware para verificar la API Key
 const verificarApiKey = async (req, res, next) => {
-
     try {
         // Obtenemos la clave que envia el dispositivo en el encabezado de la solicitud
         const apiKey = req.headers['x-api-key'];
 
         // Comprobamos que se haya enviado una clave
-        if (!apiKey) {
+        if (!apiKey || typeof apiKey !== 'string' || apiKey.trim() === '') {
             return res.status(401).json({mensaje: 'La API Key es obligatoria en el encabezado de la solicitud'});
         }
 
@@ -27,7 +26,7 @@ const verificarApiKey = async (req, res, next) => {
             return res.status(401).json({mensaje: 'API Key inválida, inactiva o vencida'});
         }
 
-        // Registramos la solicitud y comprobamos el límite de uso
+        // Registramos la solicitud y comprobamos el limite de uso
         const solicitudRegistrada = await registrarSolicitud(apiKeyEncontrada.id_api_key);
 
         // Si no se pudo registrar, se alcanzo el limite o la clave dejo de ser valida

@@ -55,7 +55,7 @@ const buscarApiKeyPorHash = (claveHash) => {
                 return reject(error);
             }
 
-            resolve(resultado[0]);
+            resolve(resultado.length > 0 ? resultado[0] : null);
         });
     });
 };
